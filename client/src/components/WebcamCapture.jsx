@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
  * - facingMode: 'user' (front) | 'environment' (rear)
  * - onCapture(blob: Blob, file: File)
  * - width, height (optional render size)
+ * - guidanceText: Text to display as overlay (e.g. "Move to well-lit area")
  */
 export default function WebcamCapture({
   facingMode = "user",
@@ -14,6 +15,7 @@ export default function WebcamCapture({
   width = 480,
   height = 360,
   autoStart = true,
+  guidanceText = "",
 }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -139,9 +141,26 @@ export default function WebcamCapture({
 
   return (
     <div className="space-y-2">
-      <div className="relative bg-black w-full" style={{ width, height }}>
-        <video ref={videoRef} style={{ width, height }} playsInline muted />
+      <div className="relative bg-black w-full overflow-hidden rounded-md" style={{ width, height }}>
+        <video ref={videoRef} style={{ width, height, objectFit: "cover" }} playsInline muted />
+
+        {/* Guidance Overlay */}
+        {isActive && guidanceText && (
+          <div className="absolute bottom-4 left-0 right-0 text-center pointer-events-none">
+            <span className="bg-black/60 text-white px-3 py-1 rounded-full text-sm font-medium">
+              {guidanceText}
+            </span>
+          </div>
+        )}
+
+        {/* Face Scanning Frame (Visual Aid) */}
+        {isActive && guidanceText.toLowerCase().includes("face") && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-48 h-64 border-2 border-white/50 rounded-full"></div>
+          </div>
+        )}
       </div>
+
       <div className="flex gap-2">
         {!isActive ? (
           <Button type="button" onClick={start}>

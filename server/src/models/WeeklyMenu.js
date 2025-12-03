@@ -101,7 +101,6 @@ const weeklyMenuSchema = new mongoose.Schema(
 );
 
 // Index for efficient queries
-weeklyMenuSchema.index({ dayOfWeek: 1 });
 weeklyMenuSchema.index({ isActive: 1 });
 weeklyMenuSchema.index({ dayOfWeek: 1, isActive: 1 });
 

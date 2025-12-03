@@ -86,7 +86,6 @@ const dailyMenuSchema = new mongoose.Schema(
 );
 
 // Index for efficient queries
-dailyMenuSchema.index({ date: 1 });
 dailyMenuSchema.index({ isActive: 1 });
 dailyMenuSchema.index({ date: 1, isActive: 1 });
 

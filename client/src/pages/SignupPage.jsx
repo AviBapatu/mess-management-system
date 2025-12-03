@@ -14,7 +14,6 @@ import { toast } from "@/hooks/use-toast";
 import { Eye, EyeOff } from "lucide-react";
 import useAuthStore from "../store/authStore";
 import WebcamCapture from "../components/WebcamCapture";
-import { mlService } from "../services/mlService";
 
 const SignupPage = () => {
   const [formData, setFormData] = useState({
@@ -26,16 +25,20 @@ const SignupPage = () => {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [faceFile, setFaceFile] = useState(null);
 
   const { signup, isLoading, error } = useAuthStore();
   const navigate = useNavigate();
-  // Face capture is moved to a dedicated page now
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const onFaceCaptured = (_blob, file) => {
+    setFaceFile(file);
   };
 
   const handleSubmit = async (e) => {
@@ -59,19 +62,33 @@ const SignupPage = () => {
       return;
     }
 
-    try {
-      const response = await signup({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
+    if (!faceFile) {
+      toast({
+        title: "Face Required",
+        description: "Please capture your face to complete registration",
+        variant: "destructive",
       });
+      return;
+    }
 
-      // After successful signup, navigate to face registration page
-      navigate("/register-face");
+    try {
+      // Create FormData for multipart upload
+      const data = new FormData();
+      data.append("name", formData.name);
+      data.append("email", formData.email);
+      data.append("password", formData.password);
+      data.append("face_image", faceFile, "face.jpg");
+
+      const response = await signup(data);
+
       toast({
         title: "Account Created",
-        description: `Welcome, ${response.user.name}. Please capture your face to complete registration.`,
+        description: `Welcome, ${response.user.name}.`,
       });
+
+      // Navigate based on role (though usually user for signup)
+      const role = response.user.role;
+      navigate(role === "admin" ? "/admin" : "/dashboard");
     } catch (error) {
       toast({
         title: "Signup Failed",
@@ -103,7 +120,7 @@ const SignupPage = () => {
         </div>
       </div>
 
-      {/* Login Form */}
+      {/* Signup Form */}
       <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div className="text-center">
@@ -117,7 +134,7 @@ const SignupPage = () => {
             <CardHeader>
               <CardTitle>Sign Up</CardTitle>
               <CardDescription>
-                Enter your information to create an account
+                Enter your information and register your face
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -216,6 +233,24 @@ const SignupPage = () => {
                       )}
                     </Button>
                   </div>
+                </div>
+
+                {/* Face Capture Section */}
+                <div className="space-y-2">
+                  <Label>Face Registration (Required)</Label>
+                  <WebcamCapture
+                    facingMode="user"
+                    onCapture={onFaceCaptured}
+                    width={400}
+                    height={300}
+                    autoStart={true}
+                    guidanceText="Position your face in the frame"
+                  />
+                  {faceFile && (
+                    <p className="text-sm text-green-600 text-center">
+                      Face captured successfully!
+                    </p>
+                  )}
                 </div>
 
                 {error && (

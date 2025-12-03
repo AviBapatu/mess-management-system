@@ -999,12 +999,11 @@ const AdminDashboard = () => {
                             <p className="font-medium">{dayName}</p>
                             <p className="text-sm text-gray-500">
                               {menu
-                                ? `${
-                                    Object.keys(menu.meals).filter(
-                                      (meal) =>
-                                        menu.meals[meal].items.length > 0
-                                    ).length
-                                  } meals planned`
+                                ? `${Object.keys(menu.meals).filter(
+                                  (meal) =>
+                                    menu.meals[meal].items.length > 0
+                                ).length
+                                } meals planned`
                                 : "No menu set"}
                             </p>
                           </div>
@@ -1135,6 +1134,7 @@ const AdminDashboard = () => {
                     onCapture={onFoodCaptured}
                     width={512}
                     height={384}
+                    guidanceText="Ensure food is clearly visible"
                   />
                   <div className="mt-3">
                     <Label className="mb-1 block">Or upload from device</Label>
@@ -1165,6 +1165,7 @@ const AdminDashboard = () => {
                     onCapture={onFaceCaptured}
                     width={512}
                     height={384}
+                    guidanceText="Position your face in the frame"
                   />
                   <div className="mt-3">
                     <Label className="mb-1 block">Or upload from device</Label>
@@ -1190,53 +1191,79 @@ const AdminDashboard = () => {
             </div>
 
             {mlResult && (
-              <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Detected Items</CardTitle>
-                    <CardDescription>Raw model output</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 text-sm">
-                      {(mlResult.detected || []).map((d, i) => (
-                        <div key={i} className="flex justify-between">
-                          <span>
-                            {d.class_name} ({(d.confidence * 100).toFixed(1)}%)
-                          </span>
-                        </div>
-                      ))}
-                      {(!mlResult.detected ||
-                        mlResult.detected.length === 0) && (
-                        <p className="text-gray-500">No items detected</p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Matched Menu Items</CardTitle>
-                    <CardDescription>
-                      Used to create the transaction
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 text-sm">
-                      {(mlResult.matchedItems || []).map((it, i) => (
-                        <div key={i} className="flex justify-between">
-                          <span>
-                            {it.name} × {it.quantity}
-                          </span>
-                          <span>₹{it.price}</span>
-                        </div>
-                      ))}
-                      <div className="border-t pt-2 mt-2 flex justify-between font-medium">
-                        <span>Total</span>
-                        <span>₹{mlResult.total || 0}</span>
+              <div className="space-y-6">
+                <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Detected Items</CardTitle>
+                      <CardDescription>Raw model output</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 text-sm">
+                        {(mlResult.detected || []).map((d, i) => (
+                          <div key={i} className="flex justify-between">
+                            <span>
+                              {d.class_name} ({(d.confidence * 100).toFixed(1)}%)
+                            </span>
+                          </div>
+                        ))}
+                        {(!mlResult.detected ||
+                          mlResult.detected.length === 0) && (
+                            <p className="text-gray-500">No items detected</p>
+                          )}
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Matched Menu Items</CardTitle>
+                      <CardDescription>
+                        Used to create the transaction
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 text-sm">
+                        {(mlResult.matchedItems || []).map((it, i) => (
+                          <div key={i} className="flex justify-between">
+                            <span>
+                              {it.name} × {it.quantity}
+                            </span>
+                            <span>₹{it.price}</span>
+                          </div>
+                        ))}
+                        <div className="border-t pt-2 mt-2 flex justify-between font-medium">
+                          <span>Total</span>
+                          <span>₹{mlResult.total || 0}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="mt-6">
+                  <Card className="bg-blue-50 border-blue-200">
+                    <CardHeader>
+                      <CardTitle className="text-blue-800">Recognized User</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-sm text-gray-500">Name</p>
+                          <p className="text-lg font-bold text-gray-900">{mlResult.recognizedUser?.name || "Unknown"}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Email</p>
+                          <p className="text-gray-700">{mlResult.recognizedUser?.email || "N/A"}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Role</p>
+                          <Badge variant="outline" className="capitalize">{mlResult.recognizedUser?.role || "User"}</Badge>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             )}
           </TabsContent>
@@ -1342,8 +1369,8 @@ const AdminDashboard = () => {
                             const menuItem = item.menuItemId?._id
                               ? item.menuItemId
                               : menuItems.find(
-                                  (m) => m._id === item.menuItemId
-                                );
+                                (m) => m._id === item.menuItemId
+                              );
 
                             return (
                               <div
@@ -1366,10 +1393,10 @@ const AdminDashboard = () => {
                                             ].items.map((itm, i) =>
                                               i === index
                                                 ? {
-                                                    ...itm,
-                                                    isAvailable:
-                                                      e.target.checked,
-                                                  }
+                                                  ...itm,
+                                                  isAvailable:
+                                                    e.target.checked,
+                                                }
                                                 : itm
                                             ),
                                           },
