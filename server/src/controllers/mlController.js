@@ -162,7 +162,7 @@ async function scanFood(req, res) {
       Valid food items in our menu are: ${validItemNames}.
       Return a JSON array of objects, where each object has:
       - "class_name" (string): The food name.
-      - "estimated_price" (number): An estimated price in INR based on the portion size visible. Assume standard Indian cafeteria/restaurant pricing.
+      - "estimated_price" (number): An estimated price in INR based on the EXACT portion size visible in the image. This is CRITICAL. Do not use a fixed standard price. Evaluate the quantity and size (e.g., a large bowl vs a small cup, 2 samosas vs 1) and estimate the price accordingly using average Indian cafeteria pricing.
       - "confidence" (number): A confidence score between 0 and 1 (e.g., 0.95).
       
       Try to match the detected food to one of the valid menu items if it looks similar. If it's a generic item like "pizza" and we have "Pizza Slice", use "Pizza Slice".
@@ -195,7 +195,7 @@ async function scanFood(req, res) {
 
     // Map detected items to MenuItems using normalized names and aliases
     const labelCounts = new Map();
-    const priceEstimates = new Map();
+    const priceSums = new Map(); // Store total estimated price for each normalized name
 
     for (const d of detected) {
       const raw = (d.class_name || "").trim();
@@ -203,11 +203,15 @@ async function scanFood(req, res) {
       const norm = normalizeName(raw);
       labelCounts.set(norm, (labelCounts.get(norm) || 0) + 1);
 
-      // Store price estimate if available
-      if (d.estimated_price && !priceEstimates.has(norm)) {
-        priceEstimates.set(norm, d.estimated_price);
+      // Accumulate price estimate
+      const est = Number(d.estimated_price);
+      if (!isNaN(est) && est > 0) {
+        priceSums.set(norm, (priceSums.get(norm) || 0) + est);
       }
     }
+
+    console.log("Detected items from Gemini:", detected);
+    console.log("Calculated price sums:", Object.fromEntries(priceSums));
 
     const allMenu = await MenuItem.find({ isAvailable: true });
     const byName = new Map(); // normalized name -> item
@@ -227,18 +231,26 @@ async function scanFood(req, res) {
     for (const [norm, qty] of labelCounts.entries()) {
       let mi = byName.get(norm) || byAlias.get(norm);
 
+      // Calculate unit price from total estimated price
+      const totalEstimated = priceSums.get(norm) || 0;
+      let unitPrice;
+
+      if (totalEstimated > 0) {
+        unitPrice = totalEstimated / qty;
+      } else {
+        // Fallback if model didn't return price
+        unitPrice = mi ? mi.price : 50;
+      }
+
       if (!mi) {
         // Auto-create new item
         const originalName = detected.find(d => normalizeName(d.class_name) === norm)?.class_name || norm;
         // Capitalize first letter of each word for better display
         const displayName = originalName.replace(/\b\w/g, l => l.toUpperCase());
 
-        // Use estimated price from Gemini, or default to 50
-        const estimatedPrice = priceEstimates.get(norm) || 50;
-
         mi = await MenuItem.create({
           name: displayName,
-          price: estimatedPrice,
+          price: unitPrice, // Use the estimated unit price for the new item
           category: "Auto-Detected",
           description: "Automatically detected by AI",
           isAvailable: true
@@ -249,7 +261,7 @@ async function scanFood(req, res) {
       }
 
       if (mi) {
-        items.push({ name: mi.name, price: mi.price, quantity: qty });
+        items.push({ name: mi.name, price: unitPrice, quantity: qty });
       }
     }
 
