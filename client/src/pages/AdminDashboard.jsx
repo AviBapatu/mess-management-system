@@ -44,6 +44,7 @@ import {
   TrendingUp,
   Calendar,
   Copy,
+  RefreshCw,
 } from "lucide-react";
 import { menuService } from "../services/menuService";
 import { transactionService } from "../services/transactionService";
@@ -1120,63 +1121,77 @@ const AdminDashboard = () => {
 
           {/* ML Scan Tab */}
           <TabsContent value="ml-scan">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <Card className="flex flex-col h-full border-2 border-dashed border-gray-200 hover:border-blue-300 transition-colors">
                 <CardHeader>
-                  <CardTitle>Food Photo</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="bg-blue-100 p-2 rounded-full">🍛</span>
+                    Food Photo
+                  </CardTitle>
                   <CardDescription>
-                    Use rear camera to capture the plate
+                    Capture the plate using the rear camera
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1 flex flex-col gap-4">
                   <WebcamCapture
                     facingMode="environment"
                     onCapture={onFoodCaptured}
-                    width={512}
-                    height={384}
                     guidanceText="Ensure food is clearly visible"
+                    mirror={false}
                   />
-                  <div className="mt-3">
-                    <Label className="mb-1 block">Or upload from device</Label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFoodUpload}
-                    />
+                  <div className="pt-4 border-t">
+                    <Label className="mb-2 block text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Alternative: Upload Image
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFoodUpload}
+                        className="text-sm"
+                      />
+                    </div>
                     {mlFoodFile && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Selected: {mlFoodFile.name}
+                      <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                        ✓ Selected: {mlFoodFile.name}
                       </p>
                     )}
                   </div>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="flex flex-col h-full border-2 border-dashed border-gray-200 hover:border-blue-300 transition-colors">
                 <CardHeader>
-                  <CardTitle>Face Photo</CardTitle>
+                  <CardTitle className="flex items-center gap-2">
+                    <span className="bg-blue-100 p-2 rounded-full">👤</span>
+                    Face Photo
+                  </CardTitle>
                   <CardDescription>
-                    Use front camera to capture the user
+                    Capture the user using the front camera
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1 flex flex-col gap-4">
                   <WebcamCapture
                     facingMode="user"
                     onCapture={onFaceCaptured}
-                    width={512}
-                    height={384}
-                    guidanceText="Position your face in the frame"
+                    guidanceText="Position face in the frame"
+                    mirror={true}
                   />
-                  <div className="mt-3">
-                    <Label className="mb-1 block">Or upload from device</Label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFaceUpload}
-                    />
+                  <div className="pt-4 border-t">
+                    <Label className="mb-2 block text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Alternative: Upload Image
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFaceUpload}
+                        className="text-sm"
+                      />
+                    </div>
                     {mlFaceFile && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Selected: {mlFaceFile.name}
+                      <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                        ✓ Selected: {mlFaceFile.name}
                       </p>
                     )}
                   </div>
@@ -1184,9 +1199,24 @@ const AdminDashboard = () => {
               </Card>
             </div>
 
-            <div className="mt-4 flex justify-end">
-              <Button onClick={handleMlScan} disabled={mlLoading}>
-                {mlLoading ? "Processing..." : "Scan & Create Transaction"}
+            <div className="mt-8 flex justify-center">
+              <Button
+                onClick={handleMlScan}
+                disabled={mlLoading || (!mlFoodFile && !mlFaceFile)}
+                size="lg"
+                className="w-full md:w-auto min-w-[300px] h-12 text-lg shadow-lg hover:shadow-xl transition-all"
+              >
+                {mlLoading ? (
+                  <>
+                    <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
+                    Processing Scan...
+                  </>
+                ) : (
+                  <>
+                    <span className="mr-2">✨</span>
+                    Scan & Create Transaction
+                  </>
+                )}
               </Button>
             </div>
 
