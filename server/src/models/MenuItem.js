@@ -13,7 +13,7 @@ const menuItemSchema = new mongoose.Schema(
     // Stored lowercase/normalized form to make matching robust
     nameNormalized: {
       type: String,
-      index: true,
+      type: String,
     },
     price: {
       type: Number,
