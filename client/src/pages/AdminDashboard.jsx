@@ -1191,6 +1191,7 @@ const AdminDashboard = () => {
             </div>
 
             {mlResult && (
+<<<<<<< HEAD
               <div className="space-y-6">
                 <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <Card>
@@ -1211,6 +1212,51 @@ const AdminDashboard = () => {
                           mlResult.detected.length === 0) && (
                             <p className="text-gray-500">No items detected</p>
                           )}
+=======
+              <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Detected Items</CardTitle>
+                    <CardDescription>Raw model output</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 text-sm">
+                      {(mlResult.detected || []).map((d, i) => (
+                        <div key={i} className="flex justify-between">
+                          <span>
+                            {d.class_name} ({(d.confidence * 100).toFixed(1)}%)
+                          </span>
+                        </div>
+                      ))}
+                      {(!mlResult.detected ||
+                        mlResult.detected.length === 0) && (
+                          <p className="text-gray-500">No items detected</p>
+                        )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Matched Menu Items</CardTitle>
+                    <CardDescription>
+                      Used to create the transaction
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 text-sm">
+                      {(mlResult.matchedItems || []).map((it, i) => (
+                        <div key={i} className="flex justify-between">
+                          <span>
+                            {it.name} × {it.quantity}
+                          </span>
+                          <span>₹{it.price}</span>
+                        </div>
+                      ))}
+                      <div className="border-t pt-2 mt-2 flex justify-between font-medium">
+                        <span>Total</span>
+                        <span>₹{mlResult.total || 0}</span>
+>>>>>>> 3370ff6e679a4e70eb18df43c6b61239883f5310
                       </div>
                     </CardContent>
                   </Card>

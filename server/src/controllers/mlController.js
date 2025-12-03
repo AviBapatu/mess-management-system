@@ -154,6 +154,7 @@ async function scanFood(req, res) {
       }
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
+<<<<<<< HEAD
       // Fetch valid menu items to guide the LLM
       const validMenuItems = await MenuItem.find({ isAvailable: true }).select("name");
       const validItemNames = validMenuItems.map((i) => i.name).join(", ");
@@ -167,6 +168,9 @@ async function scanFood(req, res) {
       Try to match the detected food to one of the valid menu items if it looks similar. If it's a generic item like "pizza" and we have "Pizza Slice", use "Pizza Slice".
       Example: [{"class_name": "Pizza Slice", "estimated_price": 120}, {"class_name": "Fresh Juice", "estimated_price": 40}]. 
       Do not include any markdown formatting or explanation, just the raw JSON.`;
+=======
+      const prompt = `Identify the food items in this image. Return a JSON array of objects, where each object has a "class_name" property (string) for the food name. Example: [{"class_name": "pizza"}, {"class_name": "burger"}]. Do not include any markdown formatting or explanation, just the raw JSON.`;
+>>>>>>> 3370ff6e679a4e70eb18df43c6b61239883f5310
 
       const imagePart = {
         inlineData: {
