@@ -999,12 +999,11 @@ const AdminDashboard = () => {
                             <p className="font-medium">{dayName}</p>
                             <p className="text-sm text-gray-500">
                               {menu
-                                ? `${
-                                    Object.keys(menu.meals).filter(
-                                      (meal) =>
-                                        menu.meals[meal].items.length > 0
-                                    ).length
-                                  } meals planned`
+                                ? `${Object.keys(menu.meals).filter(
+                                  (meal) =>
+                                    menu.meals[meal].items.length > 0
+                                ).length
+                                } meals planned`
                                 : "No menu set"}
                             </p>
                           </div>
@@ -1135,6 +1134,7 @@ const AdminDashboard = () => {
                     onCapture={onFoodCaptured}
                     width={512}
                     height={384}
+                    guidanceText="Ensure food is clearly visible"
                   />
                   <div className="mt-3">
                     <Label className="mb-1 block">Or upload from device</Label>
@@ -1165,6 +1165,7 @@ const AdminDashboard = () => {
                     onCapture={onFaceCaptured}
                     width={512}
                     height={384}
+                    guidanceText="Position your face in the frame"
                   />
                   <div className="mt-3">
                     <Label className="mb-1 block">Or upload from device</Label>
@@ -1207,8 +1208,8 @@ const AdminDashboard = () => {
                       ))}
                       {(!mlResult.detected ||
                         mlResult.detected.length === 0) && (
-                        <p className="text-gray-500">No items detected</p>
-                      )}
+                          <p className="text-gray-500">No items detected</p>
+                        )}
                     </div>
                   </CardContent>
                 </Card>
@@ -1342,8 +1343,8 @@ const AdminDashboard = () => {
                             const menuItem = item.menuItemId?._id
                               ? item.menuItemId
                               : menuItems.find(
-                                  (m) => m._id === item.menuItemId
-                                );
+                                (m) => m._id === item.menuItemId
+                              );
 
                             return (
                               <div
@@ -1366,10 +1367,10 @@ const AdminDashboard = () => {
                                             ].items.map((itm, i) =>
                                               i === index
                                                 ? {
-                                                    ...itm,
-                                                    isAvailable:
-                                                      e.target.checked,
-                                                  }
+                                                  ...itm,
+                                                  isAvailable:
+                                                    e.target.checked,
+                                                }
                                                 : itm
                                             ),
                                           },

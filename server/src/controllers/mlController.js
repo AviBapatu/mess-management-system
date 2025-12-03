@@ -1,11 +1,16 @@
 const axios = require("axios");
 const FormData = require("form-data");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { User, MenuItem, Transaction } = require("../models");
 const { normalizeName } = require("../utils/text");
 
 const ML_BASE_URL = process.env.ML_SERVICE_URL || "http://localhost:8000";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-// Helper to call ML service with multipart
+// Initialize Gemini
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+// Helper to call ML service with multipart (for face only now)
 async function mlPostMultipart(path, fields, files) {
   const form = new FormData();
   Object.entries(fields || {}).forEach(([k, v]) => form.append(k, v));
@@ -18,7 +23,7 @@ async function mlPostMultipart(path, fields, files) {
   const url = `${ML_BASE_URL}${path}`;
   const res = await axios.post(url, form, {
     headers: form.getHeaders(),
-    timeout: 60000,
+    timeout: 120000,
   });
   return res.data;
 }
@@ -96,56 +101,28 @@ async function scanFood(req, res) {
         .json({ message: "food_image and face_image are required" });
     }
 
-    // Call ML service to get both detection and face embedding
-    const data = await mlPostMultipart("/analyze", {}, [
-      {
-        field: "food_image",
-        buffer: foodFile.buffer,
-        filename: foodFile.originalname || "food.jpg",
-        mimetype: foodFile.mimetype || "image/jpeg",
-      },
-      {
-        field: "face_image",
-        buffer: faceFile.buffer,
-        filename: faceFile.originalname || "face.jpg",
-        mimetype: faceFile.mimetype || "image/jpeg",
-      },
-    ]);
-
-    // Debug: log ML service response summary/raw
-    if (process.env.DEBUG_ML_RESPONSE === "1") {
-      try {
-        const fi = Array.isArray(data.food_items) ? data.food_items : [];
-        const embLen = Array.isArray(data.embedding) ? data.embedding.length : null;
-        console.log(
-          `[ML Response] food_items=${fi.length}, embedding_len=${embLen}`
-        );
-        const preview = fi.slice(0, 20).map((d, i) => ({
-          i,
-          class: d.class_name ?? d.class ?? null,
-          conf: d.confidence ?? d.conf ?? null,
-          box: d.box ?? d.bbox ?? undefined,
-        }));
-        console.log("[ML Response] items_preview:", preview);
-        if (process.env.DEBUG_ML_RAW === "1") {
-          const embHead = Array.isArray(data.embedding)
-            ? data.embedding.slice(0, 8)
-            : null;
-          const safe = {
-            ...data,
-            embedding: embHead,
-          };
-          console.log("[ML Response raw]", JSON.stringify(safe, null, 2));
-        }
-      } catch (e) {
-        console.warn("[ML Response] failed to log response:", e.message);
+    // 1. Face Recognition (Local Python Service)
+    let faceEmbedding = null;
+    try {
+      const faceData = await mlPostMultipart("/face/embedding", {}, [
+        {
+          field: "face_image",
+          buffer: faceFile.buffer,
+          filename: faceFile.originalname || "face.jpg",
+          mimetype: faceFile.mimetype || "image/jpeg",
+        },
+      ]);
+      if (faceData && Array.isArray(faceData.embedding)) {
+        faceEmbedding = faceData.embedding;
       }
+    } catch (faceErr) {
+      console.error("Face service error:", faceErr.message);
+      // We might want to continue even if face fails, or fail hard.
+      // For now, let's fail hard as user identification is crucial.
+      return res.status(502).json({ message: "Face recognition service failed" });
     }
 
-    const detected = Array.isArray(data.food_items) ? data.food_items : [];
-    const faceEmbedding = Array.isArray(data.embedding) ? data.embedding : null;
-
-    // Match embedding against users with stored embeddings
+    // Match embedding against users
     let targetUser = null;
     let bestDist = null;
     if (faceEmbedding) {
@@ -167,7 +144,41 @@ async function scanFood(req, res) {
         targetUser = null;
       }
     }
-    if (!targetUser) targetUser = req.user; // fallback
+    if (!targetUser) targetUser = req.user; // fallback to logged-in user if match fails or not found
+
+    // 2. Food Detection (Gemini LLM)
+    let detected = [];
+    try {
+      if (!GEMINI_API_KEY) {
+        throw new Error("GEMINI_API_KEY is not configured");
+      }
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+      const prompt = `Identify the food items in this image. Return a JSON array of objects, where each object has a "class_name" property (string) for the food name. Example: [{"class_name": "pizza"}, {"class_name": "burger"}]. Do not include any markdown formatting or explanation, just the raw JSON.`;
+
+      const imagePart = {
+        inlineData: {
+          data: foodFile.buffer.toString("base64"),
+          mimeType: foodFile.mimetype,
+        },
+      };
+
+      const result = await model.generateContent([prompt, imagePart]);
+      const response = await result.response;
+      const text = response.text();
+
+      // Clean up potential markdown code blocks if Gemini sends them
+      const jsonStr = text.replace(/```json/g, "").replace(/```/g, "").trim();
+      detected = JSON.parse(jsonStr);
+
+      if (!Array.isArray(detected)) {
+        console.warn("Gemini returned non-array:", detected);
+        detected = [];
+      }
+    } catch (geminiErr) {
+      console.error("Gemini error:", geminiErr);
+      return res.status(502).json({ message: "Food detection failed", error: geminiErr.message });
+    }
 
     // Map detected items to MenuItems using normalized names and aliases
     const labelCounts = new Map();
@@ -188,31 +199,6 @@ async function scanFood(req, res) {
         for (const a of mi.aliases) {
           const an = normalizeName(a);
           if (an && !byAlias.has(an)) byAlias.set(an, mi);
-        }
-      }
-    }
-
-    // Optional debug logging per detected item
-    if (process.env.DEBUG_ML_MATCH === "1") {
-      console.log(
-        `[ML Match] Available menu keys -> names: ${byName.size}, aliases: ${byAlias.size}`
-      );
-      for (const d of detected) {
-        const raw = (d.class_name || "").trim();
-        if (!raw) continue;
-        const norm = normalizeName(raw);
-        const matchedByName = byName.get(norm);
-        const matchedByAlias = byAlias.get(norm);
-        const mi = matchedByName || matchedByAlias || null;
-        const source = matchedByName ? "name" : matchedByAlias ? "alias" : "none";
-        if (mi) {
-          console.log(
-            `[ML Match] raw="${raw}" norm="${norm}" -> MATCH via ${source}: ${mi.name} (price=${mi.price})`
-          );
-        } else {
-          console.log(
-            `[ML Match] raw="${raw}" norm="${norm}" -> NO MATCH`
-          );
         }
       }
     }
@@ -263,3 +249,4 @@ async function scanFood(req, res) {
 }
 
 module.exports = { registerFace, scanFood };
+

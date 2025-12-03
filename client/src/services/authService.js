@@ -2,7 +2,11 @@ import api from "./api";
 
 export const authService = {
   async signup(userData) {
-    const response = await api.post("/auth/signup", userData);
+    const config =
+      userData instanceof FormData
+        ? { headers: { "Content-Type": undefined } }
+        : {};
+    const response = await api.post("/auth/signup", userData, config);
     if (response.data.token) {
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user", JSON.stringify(response.data.user));

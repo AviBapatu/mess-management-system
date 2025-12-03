@@ -1,0 +1,13 @@
+@echo off
+echo Starting Mess Management System...
+
+echo Starting Python Face Service...
+start "Face Service" cmd /k "cd server\ml models\IOT project && python -m uvicorn app.main:app --reload --port 8000"
+
+echo Starting Node.js Server...
+start "Node Server" cmd /k "cd server && npm start"
+
+echo Starting React Client...
+start "React Client" cmd /k "cd client && npm run dev"
+
+echo All services started!

@@ -18,6 +18,12 @@ def save_image(file_bytes: bytes, out_dir: Path, filename: str) -> Path:
     return p
 
 
+def preload_model(model_name: str = 'Facenet512'):
+    print(f"Preloading {model_name}...")
+    DeepFace.build_model(model_name=model_name)
+    print(f"{model_name} preloaded.")
+
+
 def compute_embedding(image_path: Path, model_name: str = 'Facenet512') -> List[float]:
     reps = DeepFace.represent(img_path=str(image_path), model_name=model_name, enforce_detection=False)
     if isinstance(reps, list) and len(reps) > 0:
