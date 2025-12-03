@@ -9,6 +9,7 @@ const transactionRoutes = require("./routes/transactionRoutes");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const dailyMenuRoutes = require("./routes/dailyMenuRoutes");
 const weeklyMenuRoutes = require("./routes/weeklyMenuRoutes");
+const mlRoutes = require("./routes/mlRoutes");
 
 const app = express();
 
@@ -36,6 +37,7 @@ app.use("/api/transactions", transactionRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/daily-menu", dailyMenuRoutes);
 app.use("/api/weekly-menu", weeklyMenuRoutes);
+app.use("/api/ml", mlRoutes);
 
 // Health check route
 app.get("/api/health", (req, res) => {

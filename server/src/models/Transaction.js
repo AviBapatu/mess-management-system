@@ -37,6 +37,11 @@ const transactionSchema = new mongoose.Schema(
       enum: ["pending", "completed", "cancelled"],
       default: "completed",
     },
+    // Optional metadata from ML scans (detected items, face match distance, raw payloads)
+    metadata: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
   },
   {
     timestamps: true,

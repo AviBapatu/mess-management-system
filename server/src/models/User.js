@@ -30,6 +30,23 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "admin"],
       default: "user",
     },
+    // Optional linkage to ML service user id and stored face image path
+    mlUserId: {
+      type: Number,
+      default: null,
+      index: true,
+    },
+    faceImagePath: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    // Stored face embedding (single vector) computed by ML service
+    faceEmbedding: {
+      type: [Number],
+      default: undefined, // omit if not set
+      select: true,
+    },
   },
   {
     timestamps: true,

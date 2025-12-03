@@ -1,0 +1,26 @@
+# Requirements for Training YOLOv8 Food Detection Model
+# Install with: pip install -r training-requirements.txt
+
+# Core ML framework
+ultralytics>=8.0.0
+
+# PyTorch - install separately based on your hardware:
+# GPU (CUDA 12.x): pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+# GPU (CUDA 11.8): pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+# CPU only:       pip install torch torchvision torchaudio
+
+# Optional but recommended
+numpy>=1.20.0
+opencv-python>=4.5.0
+Pillow>=8.0.0
+PyYAML>=5.3.1
+scipy>=1.5.0
+
+# For monitoring (optional)
+matplotlib>=3.3.0
+pandas>=1.1.0
+seaborn>=0.11.0
+
+# Jupyter notebook (optional, if you want to experiment)
+# jupyter>=1.0.0
+# notebook>=6.0.0

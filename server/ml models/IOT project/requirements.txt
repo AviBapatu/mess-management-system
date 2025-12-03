@@ -1,0 +1,4 @@
+ultralytics>=8.2.0,<9
+# Optional for running notebooks and headless execution
+jupyter
+nbconvert

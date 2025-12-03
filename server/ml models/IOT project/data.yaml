@@ -1,0 +1,11 @@
+train: ./train/images
+val: ./train/images
+test: ./train/images
+
+nc: 25
+names: ['Aloo curry', 'Bagara rice', 'Bendakaya fry', 'Boiled egg',
+        'Chicken curry', 'Chicken dum biryani', 'Chutney', 'Curd',
+        'Dosa', 'Fryums', 'Hot pongal', 'Icecream', 'Lemon water',
+        'Mixed vegetable curry', 'Onions', 'Raita', 'Rasam', 'Roti',
+        'Roti pachadi', 'Tomato rice', 'Vada', 'Vankaya curry',
+        'Watermelon juice', 'White rice', 'sambar']

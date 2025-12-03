@@ -13,6 +13,7 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import UserDashboard from "./pages/UserDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import FaceRegistration from "./pages/FaceRegistration";
 import "./App.css";
 
 function App() {
@@ -52,6 +53,16 @@ function App() {
               ) : (
                 <SignupPage />
               )
+            }
+          />
+
+          {/* Face registration: must be authenticated */}
+          <Route
+            path="/register-face"
+            element={
+              <ProtectedRoute>
+                <FaceRegistration />
+              </ProtectedRoute>
             }
           />
 

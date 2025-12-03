@@ -1,4 +1,5 @@
 const { MenuItem } = require("../models");
+const { normalizeName } = require("../utils/text");
 
 const getAllMenuItems = async (req, res) => {
   try {
@@ -26,7 +27,7 @@ const getAllMenuItems = async (req, res) => {
 
 const createMenuItem = async (req, res) => {
   try {
-    const { name, price, category, description, isAvailable } = req.body;
+  const { name, price, category, description, isAvailable, aliases } = req.body;
 
     // Validate required fields
     if (!name || !price) {
@@ -37,7 +38,10 @@ const createMenuItem = async (req, res) => {
 
     // Check if item already exists
     const existingItem = await MenuItem.findOne({
-      name: name.trim(),
+      $or: [
+        { name: name.trim() },
+        { nameNormalized: normalizeName(name) },
+      ],
     });
 
     if (existingItem) {
@@ -52,6 +56,7 @@ const createMenuItem = async (req, res) => {
       category: category?.trim() || "General",
       description: description?.trim(),
       isAvailable: isAvailable !== undefined ? isAvailable : true,
+      aliases: Array.isArray(aliases) ? aliases : [],
     });
 
     await menuItem.save();
@@ -80,8 +85,8 @@ const createMenuItem = async (req, res) => {
 
 const updateMenuItem = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { name, price, category, description, isAvailable } = req.body;
+  const { id } = req.params;
+  const { name, price, category, description, isAvailable, aliases } = req.body;
 
     const menuItem = await MenuItem.findById(id);
     if (!menuItem) {
@@ -93,7 +98,10 @@ const updateMenuItem = async (req, res) => {
     // Check if name is being changed and if it conflicts
     if (name && name.trim() !== menuItem.name) {
       const existingItem = await MenuItem.findOne({
-        name: name.trim(),
+        $or: [
+          { name: name.trim() },
+          { nameNormalized: normalizeName(name) },
+        ],
         _id: { $ne: id },
       });
 
@@ -108,7 +116,8 @@ const updateMenuItem = async (req, res) => {
     if (name) menuItem.name = name.trim();
     if (price !== undefined) menuItem.price = parseFloat(price);
     if (category) menuItem.category = category.trim();
-    if (description !== undefined) menuItem.description = description.trim();
+  if (description !== undefined) menuItem.description = description.trim();
+  if (aliases !== undefined) menuItem.aliases = Array.isArray(aliases) ? aliases : [];
     if (isAvailable !== undefined) menuItem.isAvailable = isAvailable;
 
     await menuItem.save();
@@ -185,10 +194,75 @@ const getMenuItemById = async (req, res) => {
   }
 };
 
+// POST /api/menu/bulk-upsert
+// Body: { items: [{ name, price, category?, description?, isAvailable?, aliases?: [..] }] }
+// Upserts by normalized name; creates or updates existing records.
+const bulkUpsertMenuItems = async (req, res) => {
+  try {
+    const { items } = req.body || {};
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ message: "items array is required" });
+    }
+
+    const ops = [];
+    for (const raw of items) {
+      if (!raw || typeof raw !== "object") continue;
+      const name = String(raw.name || "").trim();
+      const price = Number(raw.price);
+      if (!name || !Number.isFinite(price)) continue;
+
+      const nameNorm = normalizeName(name);
+      const update = {
+        name,
+        nameNormalized: nameNorm,
+        price,
+      };
+      if (raw.category != null) update.category = String(raw.category).trim();
+      if (raw.description != null)
+        update.description = String(raw.description).trim();
+      if (raw.isAvailable != null) update.isAvailable = !!raw.isAvailable;
+      if (raw.aliases != null)
+        update.aliases = Array.isArray(raw.aliases)
+          ? raw.aliases.map((a) => String(a || "").trim()).filter(Boolean)
+          : [];
+
+      ops.push({
+        updateOne: {
+          filter: {
+            $or: [{ nameNormalized: nameNorm }, { name: name }],
+          },
+          update: { $set: update },
+          upsert: true,
+        },
+      });
+    }
+
+    if (ops.length === 0) {
+      return res.status(400).json({ message: "No valid items to upsert" });
+    }
+
+    const result = await MenuItem.bulkWrite(ops, { ordered: false });
+    return res.json({
+      message: "Menu items upserted",
+      matched: result.matchedCount,
+      modified: result.modifiedCount,
+      upserted: result.upsertedCount,
+      result,
+    });
+  } catch (error) {
+    console.error("Bulk upsert menu items error:", error);
+    return res.status(500).json({
+      message: "Error upserting menu items",
+      error: process.env.NODE_ENV === "production" ? {} : error.message,
+    });
+  }
+};
+
 module.exports = {
   getAllMenuItems,
   createMenuItem,
   updateMenuItem,
   deleteMenuItem,
   getMenuItemById,
+  bulkUpsertMenuItems,
 };

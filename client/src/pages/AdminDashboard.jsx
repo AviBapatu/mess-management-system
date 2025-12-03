@@ -59,6 +59,8 @@ import {
   formatDayName,
 } from "../services/weeklyMenuService";
 import useAuthStore from "../store/authStore";
+import WebcamCapture from "../components/WebcamCapture";
+import { mlService } from "../services/mlService";
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
@@ -93,7 +95,58 @@ const AdminDashboard = () => {
     specialNotes: "",
   });
 
+  // ML Scan state
+  const [mlFoodFile, setMlFoodFile] = useState(null);
+  const [mlFaceFile, setMlFaceFile] = useState(null);
+  const [mlLoading, setMlLoading] = useState(false);
+  const [mlResult, setMlResult] = useState(null);
+
   const { user, logout } = useAuthStore();
+
+  // ML capture handlers
+  const onFoodCaptured = (_blob, file) => setMlFoodFile(file);
+  const onFaceCaptured = (_blob, file) => setMlFaceFile(file);
+  const handleFoodUpload = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) setMlFoodFile(file);
+  };
+  const handleFaceUpload = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) setMlFaceFile(file);
+  };
+
+  async function handleMlScan() {
+    if (!mlFoodFile || !mlFaceFile) {
+      toast({
+        title: "Missing photos",
+        description: "Capture both food and face photos first",
+        variant: "destructive",
+      });
+      return;
+    }
+    try {
+      setMlLoading(true);
+      const data = await mlService.scan({
+        foodImage: mlFoodFile,
+        faceImage: mlFaceFile,
+      });
+      setMlResult(data);
+      toast({
+        title: "Scan complete",
+        description: `Matched ${data.matchedItems?.length || 0} items`,
+      });
+      // Refresh transactions tab content if open
+      await fetchTransactions();
+    } catch (e) {
+      toast({
+        title: "Scan failed",
+        description: e.response?.data?.message || e.message,
+        variant: "destructive",
+      });
+    } finally {
+      setMlLoading(false);
+    }
+  }
 
   useEffect(() => {
     if (activeTab === "overview") {
@@ -515,11 +568,12 @@ const AdminDashboard = () => {
           onValueChange={setActiveTab}
           className="space-y-6"
         >
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="menu">Menu Management</TabsTrigger>
             <TabsTrigger value="weekly-menu">Weekly Menu</TabsTrigger>
             <TabsTrigger value="transactions">Transactions</TabsTrigger>
+            <TabsTrigger value="ml-scan">ML Scan</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -1063,6 +1117,128 @@ const AdminDashboard = () => {
                 </Table>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* ML Scan Tab */}
+          <TabsContent value="ml-scan">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Food Photo</CardTitle>
+                  <CardDescription>
+                    Use rear camera to capture the plate
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <WebcamCapture
+                    facingMode="environment"
+                    onCapture={onFoodCaptured}
+                    width={512}
+                    height={384}
+                  />
+                  <div className="mt-3">
+                    <Label className="mb-1 block">Or upload from device</Label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFoodUpload}
+                    />
+                    {mlFoodFile && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Selected: {mlFoodFile.name}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Face Photo</CardTitle>
+                  <CardDescription>
+                    Use front camera to capture the user
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <WebcamCapture
+                    facingMode="user"
+                    onCapture={onFaceCaptured}
+                    width={512}
+                    height={384}
+                  />
+                  <div className="mt-3">
+                    <Label className="mb-1 block">Or upload from device</Label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFaceUpload}
+                    />
+                    {mlFaceFile && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Selected: {mlFaceFile.name}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <Button onClick={handleMlScan} disabled={mlLoading}>
+                {mlLoading ? "Processing..." : "Scan & Create Transaction"}
+              </Button>
+            </div>
+
+            {mlResult && (
+              <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Detected Items</CardTitle>
+                    <CardDescription>Raw model output</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 text-sm">
+                      {(mlResult.detected || []).map((d, i) => (
+                        <div key={i} className="flex justify-between">
+                          <span>
+                            {d.class_name} ({(d.confidence * 100).toFixed(1)}%)
+                          </span>
+                        </div>
+                      ))}
+                      {(!mlResult.detected ||
+                        mlResult.detected.length === 0) && (
+                        <p className="text-gray-500">No items detected</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Matched Menu Items</CardTitle>
+                    <CardDescription>
+                      Used to create the transaction
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2 text-sm">
+                      {(mlResult.matchedItems || []).map((it, i) => (
+                        <div key={i} className="flex justify-between">
+                          <span>
+                            {it.name} × {it.quantity}
+                          </span>
+                          <span>₹{it.price}</span>
+                        </div>
+                      ))}
+                      <div className="border-t pt-2 mt-2 flex justify-between font-medium">
+                        <span>Total</span>
+                        <span>₹{mlResult.total || 0}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
 

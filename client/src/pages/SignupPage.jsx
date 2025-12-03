@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Eye, EyeOff } from "lucide-react";
 import useAuthStore from "../store/authStore";
+import WebcamCapture from "../components/WebcamCapture";
+import { mlService } from "../services/mlService";
 
 const SignupPage = () => {
   const [formData, setFormData] = useState({
@@ -27,6 +29,7 @@ const SignupPage = () => {
 
   const { signup, isLoading, error } = useAuthStore();
   const navigate = useNavigate();
+  // Face capture is moved to a dedicated page now
 
   const handleChange = (e) => {
     setFormData({
@@ -63,17 +66,12 @@ const SignupPage = () => {
         password: formData.password,
       });
 
+      // After successful signup, navigate to face registration page
+      navigate("/register-face");
       toast({
         title: "Account Created",
-        description: `Welcome to Mess Management System, ${response.user.name}!`,
+        description: `Welcome, ${response.user.name}. Please capture your face to complete registration.`,
       });
-
-      // Redirect based on user role
-      if (response.user.role === "admin") {
-        navigate("/admin");
-      } else {
-        navigate("/dashboard");
-      }
     } catch (error) {
       toast({
         title: "Signup Failed",

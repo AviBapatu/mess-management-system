@@ -1,0 +1,13 @@
+fastapi>=0.111
+uvicorn[standard]>=0.30
+ultralytics>=8.2.0,<9
+opencv-python-headless>=4.7
+numpy
+pillow
+sqlalchemy==2.*  # optional if you migrate to ORM
+pydantic>=2
+python-multipart
+# DeepFace pulls backends (TF). This is heavy; for CPU-only containers it will work but large.
+deepface>=0.0.92
+# With TensorFlow 2.20+, RetinaFace requires tf-keras (Keras 3 split). Add explicitly to avoid import errors.
+tf-keras>=2.20
