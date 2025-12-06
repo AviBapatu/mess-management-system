@@ -15,7 +15,9 @@ try {
     genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
   } else {
-    console.warn("[ML Controller] GEMINI_API_KEY is missing. Food detection will fail.");
+    console.warn(
+      "[ML Controller] GEMINI_API_KEY is missing. Food detection will fail."
+    );
   }
 } catch (e) {
   console.error("[ML Controller] Failed to initialize Gemini:", e);
@@ -95,7 +97,10 @@ async function registerFace(req, res) {
   } catch (err) {
     const errorData = err.response?.data || err.message;
     console.error("registerFace error:", errorData);
-    if (typeof errorData === "string" && errorData.includes("<!DOCTYPE html>")) {
+    if (
+      typeof errorData === "string" &&
+      errorData.includes("<!DOCTYPE html>")
+    ) {
       console.error(
         "Received HTML response from ML service. This usually means the ngrok URL is incorrect or the tunnel is down."
       );
@@ -141,7 +146,7 @@ async function scanFood(req, res) {
       if (!model) {
         throw new Error("Gemini model not initialized (check GEMINI_API_KEY)");
       }
-      
+
       const prompt = `Identify the food items in this image. Return a JSON array where each object has:
       - "class_name": The name of the food item.
       - "confidence": A number between 0 and 1 indicating confidence.
@@ -149,7 +154,7 @@ async function scanFood(req, res) {
       
       Example: [{"class_name": "rice", "confidence": 0.95, "estimated_price_inr": 40}, {"class_name": "chicken curry", "confidence": 0.88, "estimated_price_inr": 120}]. 
       Do not include markdown formatting.`;
-      
+
       const imagePart = {
         inlineData: {
           data: foodFile.buffer.toString("base64"),
@@ -161,16 +166,19 @@ async function scanFood(req, res) {
       const response = await result.response;
       const text = response.text();
       console.log("Gemini response text:", text);
-      
+
       // Clean up markdown if present
-      const jsonStr = text.replace(/```json/g, "").replace(/```/g, "").trim();
+      const jsonStr = text
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
       try {
         detected = JSON.parse(jsonStr);
       } catch (parseError) {
         console.error("Failed to parse Gemini JSON:", jsonStr);
         detected = [];
       }
-      
+
       if (!Array.isArray(detected)) {
         console.warn("Gemini returned non-array:", detected);
         detected = [];
@@ -242,25 +250,26 @@ async function scanFood(req, res) {
 
     // Map detected items to MenuItems using normalized names and aliases
     const detectedItemsMap = new Map(); // norm -> { count, confidenceSum, priceSum, rawName }
-    
+
     for (const d of detected) {
       const raw = (d.class_name || "").trim();
       if (!raw) continue;
       const norm = normalizeName(raw);
-      
+
       if (!detectedItemsMap.has(norm)) {
-        detectedItemsMap.set(norm, { 
-          count: 0, 
-          confSum: 0, 
-          priceSum: 0, 
-          rawName: raw 
+        detectedItemsMap.set(norm, {
+          count: 0,
+          confSum: 0,
+          priceSum: 0,
+          rawName: raw,
         });
       }
-      
+
       const entry = detectedItemsMap.get(norm);
       entry.count++;
-      entry.confSum += (typeof d.confidence === 'number' ? d.confidence : 0.9);
-      entry.priceSum += (typeof d.estimated_price_inr === 'number' ? d.estimated_price_inr : 50);
+      entry.confSum += typeof d.confidence === "number" ? d.confidence : 0.9;
+      entry.priceSum +=
+        typeof d.estimated_price_inr === "number" ? d.estimated_price_inr : 50;
     }
 
     const allMenu = await MenuItem.find({ isAvailable: true });
@@ -287,21 +296,21 @@ async function scanFood(req, res) {
     const items = [];
     for (const [norm, data] of detectedItemsMap.entries()) {
       const mi = byName.get(norm) || byAlias.get(norm);
-      
+
       if (mi) {
         // Found in menu - use menu price
-        items.push({ 
-          name: mi.name, 
-          price: mi.price, 
-          quantity: data.count 
+        items.push({
+          name: mi.name,
+          price: mi.price,
+          quantity: data.count,
         });
       } else {
         // Not in menu - use estimated price from Gemini
         const avgPrice = Math.round(data.priceSum / data.count);
-        items.push({ 
-          name: data.rawName, 
-          price: avgPrice, 
-          quantity: data.count 
+        items.push({
+          name: data.rawName,
+          price: avgPrice,
+          quantity: data.count,
         });
       }
     }
@@ -337,7 +346,10 @@ async function scanFood(req, res) {
   } catch (err) {
     const errorData = err.response?.data || err.message;
     console.error("scanFood error:", errorData);
-    if (typeof errorData === "string" && errorData.includes("<!DOCTYPE html>")) {
+    if (
+      typeof errorData === "string" &&
+      errorData.includes("<!DOCTYPE html>")
+    ) {
       console.error(
         "Received HTML response from ML service. This usually means the ngrok URL is incorrect or the tunnel is down."
       );
@@ -348,7 +360,7 @@ async function scanFood(req, res) {
         typeof errorData === "object"
           ? errorData
           : String(errorData).substring(0, 500),
-      details: process.env.NODE_ENV !== 'production' ? err.stack : undefined
+      details: process.env.NODE_ENV !== "production" ? err.stack : undefined,
     });
   }
 }
